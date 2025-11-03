@@ -35,22 +35,19 @@
 0
 
 //!PARAM CLIP_scale
-//!TYPE DEFINE
-//!DESC float
+//!TYPE CONSTANT float
 //!MINIMUM 0.0
 //!MAXIMUM 1.0
 0.8
 
 //!PARAM CLIP_cscale
-//!TYPE DEFINE
-//!DESC float
+//!TYPE CONSTANT float
 //!MINIMUM 0.0
 //!MAXIMUM 1.0
 0.8
 
 //!PARAM CLIP_dscale
-//!TYPE DEFINE
-//!DESC float
+//!TYPE CONSTANT float
 //!MINIMUM 0.0
 //!MAXIMUM 1.0
 1.0

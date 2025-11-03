@@ -36,7 +36,7 @@
 0.25
 
 //!PARAM PQ
-//!TYPE DEFINE
+//!TYPE int
 //!MINIMUM 0
 //!MAXIMUM 1
 0
@@ -69,26 +69,26 @@
 #define kTileSize (kTilePitch * (NIS_BLOCK_HEIGHT + kPadSize))
 #define kEdgeMapPitch (NIS_BLOCK_WIDTH + 2)
 #define kEdgeMapSize (kEdgeMapPitch * (NIS_BLOCK_HEIGHT + 2))
-const float sharpen_slider = clamp(SHARPNESS, 0.0f, 1.0f) - 0.5f;
-const float MaxScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.75f;
-const float MinScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
-const float LimitScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
-const float kDetectRatio = 2 * 1127.f / 1024.f;
-const float kDetectThres = (bool(NIS_HDR_MODE) ? 32.0f : 64.0f) / 1024.0f;
-const float kMinContrastRatio = bool(NIS_HDR_MODE) ? 1.5f : 2.0f;
-const float kMaxContrastRatio = bool(NIS_HDR_MODE) ? 5.0f : 10.0f;
-const float kSharpStartY = bool(NIS_HDR_MODE) ? 0.35f : 0.45f;
-const float kSharpEndY = bool(NIS_HDR_MODE) ? 0.55f : 0.9f;
-const float kSharpStrengthMin = max(0.0f, 0.4f + sharpen_slider * MinScale * (bool(NIS_HDR_MODE) ? 1.1f : 1.2));
-const float kSharpStrengthMax = ((bool(NIS_HDR_MODE) ? 2.2f : 1.6f) + sharpen_slider * MaxScale * 1.8f);
-const float kSharpLimitMin = max((bool(NIS_HDR_MODE) ? 0.06f :0.1f), (bool(NIS_HDR_MODE) ? 0.1f : 0.14f) + sharpen_slider * LimitScale * (bool(NIS_HDR_MODE) ? 0.28f : 0.32f));
-const float kSharpLimitMax = ((bool(NIS_HDR_MODE) ? 0.6f : 0.5f) + sharpen_slider * LimitScale * 0.6f);
-const float kRatioNorm = 1.0f / (kMaxContrastRatio - kMinContrastRatio);
-const float kSharpScaleY = 1.0f / (kSharpEndY - kSharpStartY);
-const float kSharpStrengthScale = kSharpStrengthMax - kSharpStrengthMin;
-const float kSharpLimitScale = kSharpLimitMax - kSharpLimitMin;
-const float kContrastBoost = 1.0f;
-const float kEps = 1.0f;
+float sharpen_slider = clamp(SHARPNESS, 0.0f, 1.0f) - 0.5f;
+float MaxScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.75f;
+float MinScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
+float LimitScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
+float kDetectRatio = 2 * 1127.f / 1024.f;
+float kDetectThres = (bool(NIS_HDR_MODE) ? 32.0f : 64.0f) / 1024.0f;
+float kMinContrastRatio = bool(NIS_HDR_MODE) ? 1.5f : 2.0f;
+float kMaxContrastRatio = bool(NIS_HDR_MODE) ? 5.0f : 10.0f;
+float kSharpStartY = bool(NIS_HDR_MODE) ? 0.35f : 0.45f;
+float kSharpEndY = bool(NIS_HDR_MODE) ? 0.55f : 0.9f;
+float kSharpStrengthMin = max(0.0f, 0.4f + sharpen_slider * MinScale * (bool(NIS_HDR_MODE) ? 1.1f : 1.2));
+float kSharpStrengthMax = ((bool(NIS_HDR_MODE) ? 2.2f : 1.6f) + sharpen_slider * MaxScale * 1.8f);
+float kSharpLimitMin = max((bool(NIS_HDR_MODE) ? 0.06f :0.1f), (bool(NIS_HDR_MODE) ? 0.1f : 0.14f) + sharpen_slider * LimitScale * (bool(NIS_HDR_MODE) ? 0.28f : 0.32f));
+float kSharpLimitMax = ((bool(NIS_HDR_MODE) ? 0.6f : 0.5f) + sharpen_slider * LimitScale * 0.6f);
+float kRatioNorm = 1.0f / (kMaxContrastRatio - kMinContrastRatio);
+float kSharpScaleY = 1.0f / (kSharpEndY - kSharpStartY);
+float kSharpStrengthScale = kSharpStrengthMax - kSharpStrengthMin;
+float kSharpLimitScale = kSharpLimitMax - kSharpLimitMin;
+float kContrastBoost = 1.0f;
+float kEps = 1.0f;
 #define kScaleX (HOOKED_size.x / target_size.x)
 #define kScaleY (HOOKED_size.y / target_size.y)
 #define kSrcNormX HOOKED_pt.x
@@ -556,3 +556,4 @@ void hook()
 //!FORMAT rgba32f
 //!FILTER NEAREST
 0000000027a019bf27a0993f27a019bf00000000000000000000000000000000ed0d3e3b1ac01bbf006f993fe71d17bfed0d3ebb0000000000000000000000002e90a03bfb5c1dbff90f993fe63f14bf89d2debb6f12033a0000000000000000d734ef3b1b9e1ebf2731983fd3de10bf55c128bc000000000000000000000000075f183cb29d1fbfcb10973fff210dbffe6577bc0000000000000000000000003480373c4e6220bf48bf953fde0209bf77be9fbc6f12033a000000000000000082e2473c128320bfe63f943f34a204bf3d2cd4bc6f12033a00000000000000001ea7683cd3de20bfbe9f923fc52000bfdcd701bd6f12033a000000000000000024977f3c4e6220bfa54e903f7d3ff5be091b1ebd6f12033a0000000000000000b9fc873cb29d1fbf6ff08d3fe7fbe9be5af539bd6f12833a0000000000000000e02d903c20631ebf4f408b3fe483debe3ee859bd6f12833a00000000000000007446943cff211dbf696f883fbc05d2be6de77bbda69bc43a0000000000000000e3a59b3ccc5d1bbf1b2f853ff8c2c4be4df38ebda69bc43a000000000000000077be9f3cecc019bf910f823f22fdb6be5305a3bd6f12033b00000000000000000ad7a33cbec117bfc4427d3f423ea8be10e9b7bd52491d3b00000000000000000ad7a33cf4fd14bf7d3f753f50fc98be3b01cdbded0d3e3b00000000000000000ad7a33c05a312bf0de06d3f5eba89be6519e2bd89d25e3b00000000000000000ad7a33c3bdf0fbf8fc2653fb37b72beb515fbbd24977f3b00000000000000009eefa73cb1bf0cbfc4425d3faa8251bef08509bee02d903b00000000000000000ad7a33c637f09bf6f81543f69002fbe190416be2e90a03b000000000000000077be9f3c4f1e06bfcc5d4b3f16fb0bbe418222be7cf2b03b000000000000000077be9f3c3cbd02bf4182423fce19d1bda08930beca54c13b0000000000000000e3a59b3c5b42febe151d393f4bea84bddbf93ebe3b70ce3b0000000000000000075f983c99bbf6bef2412f3ffaedebbc287e4cbe89d2de3b0000000000000000075f983c6900efbe4260253f075f183cac8b5bbed734ef3b0000000000000000e02d903c27c2e6be0c021b3fca32443dfa7e6abeb9fc073c00000000000000004d158c3c77bedfbea5bd113f57ecaf3d6c787abee02d103c000000000000000026e4833c22fdd6beab3e073f1283003e810485be2e90203c000000000000000026e4833cf241cfbe7502fa3ed578293e3b018dbe55c1283c0000000000000000fe65773cb003c7be143fe63e97ff503ef4fd94be0e4f2f3c00000000000000001ea7683cd200bebe857cd03e6c787a3eadfa9cbe5bb13f3c0000000000000000f775603c1904b6bea301bc3ebc05923e0b46a5be82e2473c0000000000000000d044583cd6c5adbeb003a73eb003a73ed6c5adbed044583c000000000000000082e2473c0b46a5bebc05923ea301bc3e1904b6bef775603c00000000000000005bb13f3cadfa9cbe6c787a3e857cd03ed200bebe1ea7683c00000000000000000e4f2f3cf4fd94be97ff503e143fe63eb003c7befe65773c000000000000000055c1283c3b018dbed578293e7502fa3ef241cfbe26e4833c00000000000000002e90203c810485be1283003eab3e073f22fdd6be26e4833c0000000000000000e02d103c6c787abe57ecaf3da5bd113f77bedfbe4d158c3c0000000000000000b9fc073cfa7e6abeca32443d0c021b3f27c2e6bee02d903c0000000000000000d734ef3bac8b5bbe075f183c4260253f6900efbe075f983c000000000000000089d2de3b287e4cbefaedebbcf2412f3f99bbf6be075f983c00000000000000003b70ce3bdbf93ebe4bea84bd151d393f5b42febee3a59b3c0000000000000000ca54c13ba08930bece19d1bd4182423f3cbd02bf77be9f3c00000000000000007cf2b03b418222be16fb0bbecc5d4b3f4f1e06bf77be9f3c00000000000000002e90a03b190416be69002fbe6f81543f637f09bf0ad7a33c0000000000000000e02d903bf08509beaa8251bec4425d3fb1bf0cbf9eefa73c000000000000000024977f3bb515fbbdb37b72be8fc2653f3bdf0fbf0ad7a33c000000000000000089d25e3b6519e2bd5eba89be0de06d3f05a312bf0ad7a33c0000000000000000ed0d3e3b3b01cdbd50fc98be7d3f753ff4fd14bf0ad7a33c000000000000000052491d3b10e9b7bd423ea8bec4427d3fbec117bf0ad7a33c00000000000000006f12033b5305a3bd22fdb6be910f823fecc019bf77be9f3c0000000000000000a69bc43a4df38ebdf8c2c4be1b2f853fcc5d1bbfe3a59b3c0000000000000000a69bc43a6de77bbdbc05d2be696f883fff211dbf7446943c00000000000000006f12833a3ee859bde483debe4f408b3f20631ebfe02d903c00000000000000006f12833a5af539bde7fbe9be6ff08d3fb29d1fbfb9fc873c00000000000000006f12033a091b1ebd7d3ff5bea54e903f4e6220bf24977f3c00000000000000006f12033adcd701bdc52000bfbe9f923fd3de20bf1ea7683c00000000000000006f12033a3d2cd4bc34a204bfe63f943f128320bf82e2473c00000000000000006f12033a77be9fbcde0209bf48bf953f4e6220bf3480373c000000000000000000000000fe6577bcff210dbfcb10973fb29d1fbf075f183c00000000000000000000000055c128bcd3de10bf2731983f1b9e1ebfd734ef3b00000000000000006f12033a89d2debbe63f14bff90f993ffb5c1dbf2e90a03b000000000000000000000000ed0d3ebbe71d17bf006f993f1ac01bbfed0d3e3b0000000000000000
+

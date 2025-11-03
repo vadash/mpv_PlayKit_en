@@ -35,7 +35,7 @@
 0.25
 
 //!PARAM PQ
-//!TYPE DEFINE
+//!TYPE int
 //!MINIMUM 0
 //!MAXIMUM 1
 0
@@ -56,26 +56,26 @@
 #define kSupportSize 5
 #define kNumPixelsX (NIS_BLOCK_WIDTH + kSupportSize + 1)
 #define kNumPixelsY (NIS_BLOCK_HEIGHT + kSupportSize + 1)
-const float sharpen_slider = clamp(SHARPNESS, 0.0f, 1.0f) - 0.5f;
-const float MaxScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.75f;
-const float MinScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
-const float LimitScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
-const float kDetectRatio = 2 * 1127.f / 1024.f;
-const float kDetectThres = (bool(NIS_HDR_MODE) ? 32.0f : 64.0f) / 1024.0f;
-const float kMinContrastRatio = bool(NIS_HDR_MODE) ? 1.5f : 2.0f;
-const float kMaxContrastRatio = bool(NIS_HDR_MODE) ? 5.0f : 10.0f;
-const float kSharpStartY = bool(NIS_HDR_MODE) ? 0.35f : 0.45f;
-const float kSharpEndY = bool(NIS_HDR_MODE) ? 0.55f : 0.9f;
-const float kSharpStrengthMin = max(0.0f, 0.4f + sharpen_slider * MinScale * (bool(NIS_HDR_MODE) ? 1.1f : 1.2));
-const float kSharpStrengthMax = ((bool(NIS_HDR_MODE) ? 2.2f : 1.6f) + sharpen_slider * MaxScale * 1.8f);
-const float kSharpLimitMin = max((bool(NIS_HDR_MODE) ? 0.06f :0.1f), (bool(NIS_HDR_MODE) ? 0.1f : 0.14f) + sharpen_slider * LimitScale * (bool(NIS_HDR_MODE) ? 0.28f : 0.32f)); //
-const float kSharpLimitMax = ((bool(NIS_HDR_MODE) ? 0.6f : 0.5f) + sharpen_slider * LimitScale * 0.6f);
-const float kRatioNorm = 1.0f / (kMaxContrastRatio - kMinContrastRatio);
-const float kSharpScaleY = 1.0f / (kSharpEndY - kSharpStartY);
-const float kSharpStrengthScale = kSharpStrengthMax - kSharpStrengthMin;
-const float kSharpLimitScale = kSharpLimitMax - kSharpLimitMin;
-const float kContrastBoost = 1.0f;
-const float kEps = 1.0f / 255.0f;
+float sharpen_slider = clamp(SHARPNESS, 0.0f, 1.0f) - 0.5f;
+float MaxScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.75f;
+float MinScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
+float LimitScale = (sharpen_slider >= 0.0f) ? 1.25f : 1.0f;
+float kDetectRatio = 2 * 1127.f / 1024.f;
+float kDetectThres = (bool(NIS_HDR_MODE) ? 32.0f : 64.0f) / 1024.0f;
+float kMinContrastRatio = bool(NIS_HDR_MODE) ? 1.5f : 2.0f;
+float kMaxContrastRatio = bool(NIS_HDR_MODE) ? 5.0f : 10.0f;
+float kSharpStartY = bool(NIS_HDR_MODE) ? 0.35f : 0.45f;
+float kSharpEndY = bool(NIS_HDR_MODE) ? 0.55f : 0.9f;
+float kSharpStrengthMin = max(0.0f, 0.4f + sharpen_slider * MinScale * (bool(NIS_HDR_MODE) ? 1.1f : 1.2));
+float kSharpStrengthMax = ((bool(NIS_HDR_MODE) ? 2.2f : 1.6f) + sharpen_slider * MaxScale * 1.8f);
+float kSharpLimitMin = max((bool(NIS_HDR_MODE) ? 0.06f :0.1f), (bool(NIS_HDR_MODE) ? 0.1f : 0.14f) + sharpen_slider * LimitScale * (bool(NIS_HDR_MODE) ? 0.28f : 0.32f)); //
+float kSharpLimitMax = ((bool(NIS_HDR_MODE) ? 0.6f : 0.5f) + sharpen_slider * LimitScale * 0.6f);
+float kRatioNorm = 1.0f / (kMaxContrastRatio - kMinContrastRatio);
+float kSharpScaleY = 1.0f / (kSharpEndY - kSharpStartY);
+float kSharpStrengthScale = kSharpStrengthMax - kSharpStrengthMin;
+float kSharpLimitScale = kSharpLimitMax - kSharpLimitMin;
+float kContrastBoost = 1.0f;
+float kEps = 1.0f / 255.0f;
 #define kSrcNormX HOOKED_pt.x
 #define kSrcNormY HOOKED_pt.y
 #define kDstNormX kSrcNormX
@@ -104,26 +104,26 @@ vec4 GetEdgeMap(float p[5][5], int i, int j) {
 	float e_0_90 = 0;
 	float e_45_135 = 0;
 
-    if (g_0_90_max + g_45_135_max == 0)
-    {
-        return vec4(0, 0, 0, 0);
-    }
+	if (g_0_90_max + g_45_135_max == 0)
+	{
+		return vec4(0, 0, 0, 0);
+	}
 
-    e_0_90 = min(g_0_90_max / (g_0_90_max + g_45_135_max), 1.0f);
-    e_45_135 = 1.0f - e_0_90;
+	e_0_90 = min(g_0_90_max / (g_0_90_max + g_45_135_max), 1.0f);
+	e_45_135 = 1.0f - e_0_90;
 
-    bool c_0_90 = (g_0_90_max > (g_0_90_min * kDetectRatio)) && (g_0_90_max > kDetectThres) && (g_0_90_max > g_45_135_min);
-    bool c_45_135 = (g_45_135_max > (g_45_135_min * kDetectRatio)) && (g_45_135_max > kDetectThres) && (g_45_135_max > g_0_90_min);
-    bool c_g_0_90 = g_0_90_max == g_0;
-    bool c_g_45_135 = g_45_135_max == g_45;
+	bool c_0_90 = (g_0_90_max > (g_0_90_min * kDetectRatio)) && (g_0_90_max > kDetectThres) && (g_0_90_max > g_45_135_min);
+	bool c_45_135 = (g_45_135_max > (g_45_135_min * kDetectRatio)) && (g_45_135_max > kDetectThres) && (g_45_135_max > g_0_90_min);
+	bool c_g_0_90 = g_0_90_max == g_0;
+	bool c_g_45_135 = g_45_135_max == g_45;
 
-    float f_e_0_90 = (c_0_90 && c_45_135) ? e_0_90 : 1.0f;
-    float f_e_45_135 = (c_0_90 && c_45_135) ? e_45_135 : 1.0f;
+	float f_e_0_90 = (c_0_90 && c_45_135) ? e_0_90 : 1.0f;
+	float f_e_45_135 = (c_0_90 && c_45_135) ? e_45_135 : 1.0f;
 
-    float weight_0 = (c_0_90 && c_g_0_90) ? f_e_0_90 : 0.0f;
-    float weight_90 = (c_0_90 && !c_g_0_90) ? f_e_0_90 : 0.0f;
-    float weight_45 = (c_45_135 && c_g_45_135) ? f_e_45_135 : 0.0f;
-    float weight_135 = (c_45_135 && !c_g_45_135) ? f_e_45_135 : 0.0f;
+	float weight_0 = (c_0_90 && c_g_0_90) ? f_e_0_90 : 0.0f;
+	float weight_90 = (c_0_90 && !c_g_0_90) ? f_e_0_90 : 0.0f;
+	float weight_45 = (c_45_135 && c_g_45_135) ? f_e_45_135 : 0.0f;
+	float weight_135 = (c_45_135 && !c_g_45_135) ? f_e_45_135 : 0.0f;
 
 	return vec4(weight_0, weight_90, weight_45, weight_135);
 }
@@ -270,3 +270,4 @@ void hook() {
 		imageStore(out_image, ivec2(dstX, dstY), op);
 	}
 }
+
