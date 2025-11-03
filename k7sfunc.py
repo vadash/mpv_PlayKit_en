@@ -2,7 +2,7 @@
 ### 文档： https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc
 ##################################################
 
-__version__ = "0.9.5"
+__version__ = "0.9.7"
 
 __all__ = [
 	"FMT_CHANGE", "FMT_CTRL",
@@ -284,7 +284,7 @@ def _check_script(
 			script_var = __import__(script_name)
 			globals()[script_name] = script_var
 		except ImportError :
-			raise ImportError(f"模块 {func_name} 依赖错误：缺失脚本 {script_name}")
+			raise ImportError(f"模块 {func_name} 依赖错误：缺失库 {script_name}")
 	if min_version is not None :
 		if LooseVersion(script_var.__version__) < LooseVersion(min_version) :
 			raise ImportError(f"模块 {func_name} 依赖错误：缺失脚本 {script_name} 的版本号过低，至少 {min_version}")
@@ -668,6 +668,21 @@ def ONNX_ANZ(
 	return elem_type
 
 ##################################################
+## 像素值限制 # helper
+##################################################
+
+def PIX_CLP(
+	input : vs.VideoNode,
+) -> vs.VideoNode :
+
+	func_name = "PIX_CLP"
+	_check_plugin(func_name, "akarin")
+
+	output = core.akarin.Expr(clips=input, expr="x 0 1 clamp")
+
+	return output
+
+##################################################
 ## 场景检测 # helper
 ##################################################
 
@@ -841,6 +856,7 @@ def ARTCNN_NV(
 	_validate_vs_threads(func_name, vs_t)
 
 	_check_plugin(func_name, "trt")
+	_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_fname = ["ArtCNN_R16F96", "ArtCNN_R8F64", "ArtCNN_R8F64_DS"][[6, 7, 8].index(model)]
@@ -905,6 +921,7 @@ def CUGAN_NV(
 	_validate_vs_threads(func_name, vs_t)
 
 	_check_plugin(func_name, "trt")
+	_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_fname = ["pro-no-denoise3x-up2x", "pro-conservative-up2x", "pro-denoise3x-up2x"][[-1, 0, 3].index(nr_lv)]
@@ -1628,6 +1645,7 @@ def DPIR_DBLK_NV(
 	_validate_vs_threads(func_name, vs_t)
 
 	_check_plugin(func_name, "trt")
+	_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_fname = ["drunet_deblocking_grayscale", "drunet_deblocking_color"][[2, 3].index(model)]
@@ -1935,6 +1953,7 @@ def DPIR_NR_NV(
 	_validate_vs_threads(func_name, vs_t)
 
 	_check_plugin(func_name, "trt")
+	_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_fname = ["drunet_gray", "drunet_color"][[0, 1].index(model)]
@@ -2605,7 +2624,6 @@ def STAB_HQ(
 
 def UAI_DML(
 	input : vs.VideoNode,
-	clamp : bool = False,
 	crc : bool = False,
 	model_pth : str = "",
 	fp16_qnt : bool = True,
@@ -2616,7 +2634,6 @@ def UAI_DML(
 
 	func_name = "UAI_DML"
 	_validate_input_clip(func_name, input)
-	_validate_bool(func_name, "clamp", clamp)
 	_validate_bool(func_name, "crc", crc)
 	_validate_string_length(func_name, "model_pth", model_pth, 5)
 	_validate_bool(func_name, "fp16_qnt", fp16_qnt)
@@ -2625,8 +2642,6 @@ def UAI_DML(
 	_validate_vs_threads(func_name, vs_t)
 
 	_check_plugin(func_name, "ort")
-	if clamp :
-		_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.ort.Version()["path"]).decode()
 	mdl_pth_rel = plg_dir + "/models/" + model_pth
@@ -2652,8 +2667,6 @@ def UAI_DML(
 		fp16_qnt = False   ### ort对于fp16模型自动使用对应的IO
 
 	clip = core.resize.Bilinear(clip=input, format=vs.RGBH if fp16_mdl else vs.RGBS, matrix_in_s="709")
-	if clamp :
-		clip = core.akarin.Expr(clips=clip, expr="x 0 1 clamp")
 	be_param = vsmlrt.BackendV2.ORT_DML(device_id=gpu, num_streams=gpu_t, fp16=fp16_qnt)
 	infer = vsmlrt.inference(clips=clip, network_path=mdl_pth, backend=be_param)
 
@@ -2669,7 +2682,6 @@ def UAI_DML(
 
 def UAI_MIGX(
 	input : vs.VideoNode,
-	clamp : bool = False,
 	crc : bool = False,
 	model_pth : str = "",
 	fp16_qnt : bool = True,
@@ -2681,7 +2693,6 @@ def UAI_MIGX(
 
 	func_name = "UAI_MIGX"
 	_validate_input_clip(func_name, input)
-	_validate_bool(func_name, "clamp", clamp)
 	_validate_bool(func_name, "crc", crc)
 	_validate_string_length(func_name, "model_pth", model_pth, 5)
 	_validate_bool(func_name, "fp16_qnt", fp16_qnt)
@@ -2691,8 +2702,6 @@ def UAI_MIGX(
 	_validate_vs_threads(func_name, vs_t)
 
 	_check_plugin(func_name, "migx")
-	if clamp :
-		_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.migx.Version()["path"]).decode()
 	mdl_pth_rel = plg_dir + "/models/" + model_pth
@@ -2718,8 +2727,6 @@ def UAI_MIGX(
 		fp16_qnt = True   ### 量化精度与模型精度匹配
 
 	clip = core.resize.Bilinear(clip=input, format=vs.RGBH if fp16_qnt else vs.RGBS, matrix_in_s="709")
-	if clamp :
-		clip = core.akarin.Expr(clips=clip, expr="x 0 1 clamp")
 	be_param = vsmlrt.BackendV2.MIGX(
 		fp16=fp16_qnt, exhaustive_tune=exh_tune, opt_shapes=[clip.width, clip.height],
 		device_id=gpu, num_streams=gpu_t, short_path=True)
@@ -2737,7 +2744,6 @@ def UAI_MIGX(
 
 def UAI_NV_TRT(
 	input : vs.VideoNode,
-	clamp : bool = False,
 	crc : bool = False,
 	model_pth : str = "",
 	opt_lv : typing.Literal[0, 1, 2, 3, 4, 5] = 3,
@@ -2755,7 +2761,6 @@ def UAI_NV_TRT(
 
 	func_name = "UAI_NV_TRT"
 	_validate_input_clip(func_name, input)
-	_validate_bool(func_name, "clamp", clamp)
 	_validate_bool(func_name, "crc", crc)
 	_validate_string_length(func_name, "model_pth", model_pth, 5)
 	_validate_literal(func_name, "opt_lv", opt_lv, [0, 1, 2, 3, 4, 5])
@@ -2778,8 +2783,6 @@ def UAI_NV_TRT(
 	_validate_vs_threads(func_name, vs_t)
 
 	_check_plugin(func_name, "trt")
-	if clamp :
-		_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
 	mdl_pth_rel = plg_dir + "/models/" + model_pth
@@ -2809,8 +2812,6 @@ def UAI_NV_TRT(
 		fp16_qnt = True
 
 	clip = core.resize.Bilinear(clip=input, format=vs.RGBH if fp16_qnt else vs.RGBS, matrix_in_s="709")
-	if clamp :
-		clip = core.akarin.Expr(clips=clip, expr="x 0 1 clamp")
 	be_param = vsmlrt.BackendV2.TRT(
 		builder_optimization_level=opt_lv, short_path=True, device_id=gpu,
 		num_streams=gpu_t, use_cuda_graph=nv1, use_cublas=nv2, use_cudnn=nv3,
