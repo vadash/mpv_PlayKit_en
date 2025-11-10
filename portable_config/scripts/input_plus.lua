@@ -240,40 +240,27 @@ function cycle_cmds(...)
 end
 
 
-function import_files(iso)
+function import_via_dialog(config)
 	if plat ~= "windows" then
 		return
 	end
 
-	local actions = {
-		[0] = {
-			multiselect = "$true",
-			handler = function(filename, is_first)
-				local mode = is_first and "replace" or "append"
-				mp.commandv("loadfile", filename, mode)
-			end
-		},
-		[1] = { -- DVD ISO
-			multiselect = "$false",
-			handler = function(filename)
-				mp.commandv("set", "dvd-device", filename)
-				mp.commandv("loadfile", "dvd://", "replace")
-			end
-		},
-		[2] = { -- BD ISO
-			multiselect = "$false",
-			handler = function(filename)
-				mp.commandv("set", "bluray-device", filename)
-				mp.commandv("loadfile", "bd://", "replace")
-			end
-		}
-	}
-	local action = actions[iso]
-
 	local was_ontop = mp.get_property_native("ontop")
 	if was_ontop then mp.set_property_native("ontop", false) end
 
-	local ps_command = string.format([[& {
+	local res = mp.utils.subprocess({
+		args = {'powershell', '-NoProfile', '-Command', config.ps_script},
+		cancellable = false,
+	})
+
+	if was_ontop then mp.set_property_native("ontop", true) end
+
+	if res.status == 0 and res.stdout then
+		config.handler(res.stdout)
+	end
+end
+function get_file_dialog_ps(multiselect)
+	return string.format([[& {
 		Trap { Write-Error -ErrorRecord $_; Exit 1 }
 		Add-Type -AssemblyName PresentationFramework
 		$u8 = [System.Text.Encoding]::UTF8
@@ -286,110 +273,98 @@ function import_files(iso)
 				$out.Write($u8filename, 0, $u8filename.Length)
 			}
 		}
-	}]] , action.multiselect)
-
-	local res = mp.utils.subprocess({
-		args = {'powershell', '-NoProfile', '-Command', ps_command},
-		cancellable = false,
-	})
-	if was_ontop then mp.set_property_native("ontop", true) end
-
-	if (res.status == 0 and res.stdout) then
-		local first_file = true
-		for filename in string.gmatch(res.stdout, '[^\r\n]+') do
-			action.handler(filename, first_file)
-			first_file = false
-		end
-	end
+	}]], multiselect)
 end
-function import_url()
-	if plat ~= "windows" then
-		return
-	end
-	local was_ontop = mp.get_property_native("ontop")
-	if was_ontop then mp.set_property_native("ontop", false) end
-	local res = mp.utils.subprocess({
-		args = {'powershell', '-NoProfile', '-Command', [[& {
-			Trap {
-				Write-Error -ErrorRecord $_
-				Exit 1
-			}
+local import_configs = {
+	files = {
+		ps_script = get_file_dialog_ps("$true"),
+		handler = function(stdout)
+			local first_file = true
+			for filename in string.gmatch(stdout, '[^\r\n]+') do
+				local mode = first_file and "replace" or "append"
+				mp.commandv("loadfile", filename, mode)
+				first_file = false
+			end
+		end
+	},
+
+	dvd_iso = {
+		ps_script = get_file_dialog_ps("$false"),
+		handler = function(stdout)
+			for filename in string.gmatch(stdout, '[^\r\n]+') do
+				mp.commandv("set", "dvd-device", filename)
+				mp.commandv("loadfile", "dvd://", "replace")
+				break
+			end
+		end
+	},
+
+	bd_iso = {
+		ps_script = get_file_dialog_ps("$false"),
+		handler = function(stdout)
+			for filename in string.gmatch(stdout, '[^\r\n]+') do
+				mp.commandv("set", "bluray-device", filename)
+				mp.commandv("loadfile", "bd://", "replace")
+				break
+			end
+		end
+	},
+
+	audio = {
+		ps_script = get_file_dialog_ps("$false"),
+		handler = function(stdout)
+			for filename in string.gmatch(stdout, '[^\r\n]+') do
+				mp.commandv("audio-add", filename, "auto")
+			end
+		end
+	},
+
+	subtitle = {
+		ps_script = get_file_dialog_ps("$false"),
+		handler = function(stdout)
+			for filename in string.gmatch(stdout, '[^\r\n]+') do
+				mp.commandv("sub-add", filename, "cached")
+			end
+		end
+	},
+
+	url = {
+		ps_script = [[& {
+			Trap { Write-Error -ErrorRecord $_; Exit 1 }
 			Add-Type -AssemblyName Microsoft.VisualBasic
 			$u8 = [System.Text.Encoding]::UTF8
 			$out = [Console]::OpenStandardOutput()
 			$urlname = [Microsoft.VisualBasic.Interaction]::InputBox("输入地址", "打开", "https://")
 			$u8urlname = $u8.GetBytes("$urlname")
 			$out.Write($u8urlname, 0, $u8urlname.Length)
-		}]]},
-		cancellable = false,
-	})
-	if was_ontop then mp.set_property_native("ontop", true) end
-	if (res.status ~= 0) then return end
-	mp.commandv("loadfile", res.stdout)
+		}]],
+		handler = function(stdout)
+			mp.commandv("loadfile", stdout)
+		end
+	}
+}
+function import_files(iso)
+	if plat ~= "windows" then
+		return
+	end
+	local config_map = {
+		[0] = import_configs.files,
+		[1] = import_configs.dvd_iso,
+		[2] = import_configs.bd_iso
+	}
+	local config = config_map[iso]
+	if config then
+		import_via_dialog(config)
+	end
+end
+function import_url()
+	import_via_dialog(import_configs.url)
 end
 function import_append_aid()
-	if plat ~= "windows" then
-		return
-	end
-	local was_ontop = mp.get_property_native("ontop")
-	if was_ontop then mp.set_property_native("ontop", false) end
-	local res = mp.utils.subprocess({
-		args = {'powershell', '-NoProfile', '-Command', [[& {
-			Trap {
-				Write-Error -ErrorRecord $_
-				Exit 1
-			}
-			Add-Type -AssemblyName PresentationFramework
-			$u8 = [System.Text.Encoding]::UTF8
-			$out = [Console]::OpenStandardOutput()
-			$ofd = New-Object -TypeName Microsoft.Win32.OpenFileDialog
-			$ofd.Multiselect = $false
-			If ($ofd.ShowDialog() -eq $true) {
-				ForEach ($filename in $ofd.FileNames) {
-					$u8filename = $u8.GetBytes("$filename")
-					$out.Write($u8filename, 0, $u8filename.Length)
-				}
-			}
-		}]]},
-		cancellable = false,
-	})
-	if was_ontop then mp.set_property_native("ontop", true) end
-	if (res.status ~= 0) then return end
-	for filename in string.gmatch(res.stdout, '[^\n]+') do
-		mp.commandv("audio-add", filename, "auto")
-	end
+	import_via_dialog(import_configs.audio)
 end
 function import_append_sid()
-	if plat ~= "windows" then
-		return
-	end
-	local was_ontop = mp.get_property_native("ontop")
-	if was_ontop then mp.set_property_native("ontop", false) end
-	local res = mp.utils.subprocess({
-		args = {'powershell', '-NoProfile', '-Command', [[& {
-			Trap {
-				Write-Error -ErrorRecord $_
-				Exit 1
-			}
-			Add-Type -AssemblyName PresentationFramework
-			$u8 = [System.Text.Encoding]::UTF8
-			$out = [Console]::OpenStandardOutput()
-			$ofd = New-Object -TypeName Microsoft.Win32.OpenFileDialog
-			$ofd.Multiselect = $false
-			If ($ofd.ShowDialog() -eq $true) {
-				ForEach ($filename in $ofd.FileNames) {
-					$u8filename = $u8.GetBytes("$filename")
-					$out.Write($u8filename, 0, $u8filename.Length)
-				}
-			}
-		}]]},
-		cancellable = false,
-	})
-	if was_ontop then mp.set_property_native("ontop", true) end
-	if (res.status ~= 0) then return end
-	for filename in string.gmatch(res.stdout, '[^\n]+') do
-		mp.commandv("sub-add", filename, "cached")
-	end
+	import_via_dialog(import_configs.subtitle)
 end
 
 
@@ -942,21 +917,6 @@ function volume_add(diff)
 end
 
 
-function lazy_helper(link)
-	local param = ""
-	if plat == "windows" then
-		param = 'no-osd run cmd /c start "" "' .. link .. '"'
-	elseif plat == "darwin" then
-		param = "no-osd run /bin/sh -c \"open '" .. link .. "' &\""
-	elseif plat == "linux" then
-		param = "no-osd run /bin/sh -c \"xdg-open '" .. link .. "' &\""
-	else
-		return
-	end
-	return param
-end
-
-
 function prop_hold(prop)
 	local function prop_auto(flag_complex)
 		local evt = flag_complex.event
@@ -1015,6 +975,75 @@ function update_shader_param(prefix, shader, param, val, def, min, max)
 
 	end
 
+end
+
+
+
+--
+-- 特殊
+--
+
+function update_var(var, val)
+	local msg_info_pre = "[input_plus] "
+	local msg_info = "内部变量更新"
+
+	if var == "spd_target" then
+		mp.remove_key_binding("speed_autox")
+		if tonumber(val) <=0 then
+			val = 0.1
+		end
+		spd_target = tonumber(val)
+		msg_info = "自定义目标速度 " .. val
+		mp.osd_message(msg_info_pre .. msg_info, 1)
+		mp.msg.info(msg_info)
+		mp.add_key_binding(nil, "speed_autox", speed_auto(nil, spd_target), {complex = true})
+
+	elseif var == "seek_dur_step" then
+		if tonumber(val) <=0 then
+			val = 0.1
+		end
+		seek_dur_step = tonumber(val)
+		msg_info = "自定义跳转步长增量 " .. val
+		mp.osd_message(msg_info_pre .. msg_info, 1)
+		mp.msg.info(msg_info)
+
+	end
+end
+
+function lazy_helper(link)
+	local param = ""
+	if plat == "windows" then
+		param = 'no-osd run cmd /c start "" "' .. link .. '"'
+	elseif plat == "darwin" then
+		param = "no-osd run /bin/sh -c \"open '" .. link .. "' &\""
+	elseif plat == "linux" then
+		param = "no-osd run /bin/sh -c \"xdg-open '" .. link .. "' &\""
+	else
+		return
+	end
+	return param
+end
+function lazy_helper_main(index)
+	index = tonumber(index)
+	local cmd = ""
+
+	if index == 0 then -- project
+		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit")
+	elseif index == 1 then -- mpv manual
+		cmd = lazy_helper("https://mpv.io/manual/master/")
+	elseif index == 2 then -- mpv manual cn
+		cmd = lazy_helper("https://hooke007.github.io/official_man/mpv.html")
+	elseif index == 3 then -- faq
+		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit/wiki/0_FAQ")
+	elseif index == 4 then -- filter
+		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit/wiki/3_FILTER")
+	elseif index == 5 then -- shader
+		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit/wiki/4_GLSL")
+	end
+
+	if cmd ~= "" then
+		mp.command(cmd)
+	end
 end
 
 
@@ -1112,52 +1141,6 @@ mp.register_script_message("cycle-cmds", cycle_cmds)
 
 mp.register_script_message("update-osd", function(num, freq) osd_hack_set(num, freq) end)
 
-mp.register_script_message("update-var", function(var, val)
-	local msg_info_pre = "[input_plus] "
-	local msg_info = "内部变量更新"
+mp.register_script_message("update-var", function(var, val) update_var(var, val) end)
 
-	if var == "spd_target" then
-		mp.remove_key_binding("speed_autox")
-		if tonumber(val) <=0 then
-			val = 0.1
-		end
-		spd_target = tonumber(val)
-		msg_info = "自定义目标速度 " .. val
-		mp.osd_message(msg_info_pre .. msg_info, 1)
-		mp.msg.info(msg_info)
-		mp.add_key_binding(nil, "speed_autox", speed_auto(nil, spd_target), {complex = true})
-
-	elseif var == "seek_dur_step" then
-		if tonumber(val) <=0 then
-			val = 0.1
-		end
-		seek_dur_step = tonumber(val)
-		msg_info = "自定义跳转步长增量 " .. val
-		mp.osd_message(msg_info_pre .. msg_info, 1)
-		mp.msg.info(msg_info)
-
-	end
-end)
-
-mp.register_script_message("lazy-helper", function(index)
-
-	index = tonumber(index)
-	local cmd = ""
-	if index == 0 then -- project
-		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit")
-	elseif index == 1 then -- mpv manual
-		cmd = lazy_helper("https://mpv.io/manual/master/")
-	elseif index == 2 then -- mpv manual cn
-		cmd = lazy_helper("https://hooke007.github.io/official_man/mpv.html")
-	elseif index == 3 then -- faq
-		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit/wiki/0_FAQ")
-	elseif index == 4 then -- filter
-		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit/wiki/3_FILTER")
-	elseif index == 5 then -- shader
-		cmd = lazy_helper("https://github.com/hooke007/mpv_PlayKit/wiki/4_GLSL")
-	end
-	if cmd ~= "" then
-		mp.command(cmd)
-	end
-
-end)
+mp.register_script_message("lazy-helper", function(index) lazy_helper_main(index) end)
