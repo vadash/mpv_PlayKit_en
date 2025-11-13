@@ -2,7 +2,7 @@
 ### 文档： https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc
 ##################################################
 
-__version__ = "0.10.4"
+__version__ = "0.10.5"
 
 __all__ = [
 	"FMT_CHANGE", "FMT_CTRL",
@@ -1146,7 +1146,7 @@ def MVT_MQ(
 	return output
 
 ##################################################
-## RIFE补帧 Vulkan
+## RIFE补帧 ncnn Vulkan
 ##################################################
 
 def RIFE_STD(
@@ -1713,25 +1713,25 @@ def SVP_PRO(
 	return output
 
 ##################################################
-## DPIR去块
+## DPIR # helper
 ##################################################
 
-def DPIR_DBLK_NV(
+def DPIR_TRT_HUB(
 	input : vs.VideoNode,
-	lt_hd : bool = False,
-	model : typing.Literal[2, 3] = 2,
-	nr_lv : float = 50.0,
-	gpu : typing.Literal[0, 1, 2] = 0,
-	gpu_t : int = 2,
-	st_eng : bool = False,
-	ws_size : int = 0,
+	lt_hd : bool,
+	model : int,
+	nr_lv : float,
+	gpu : typing.Literal[0, 1, 2],
+	gpu_t : int,
+	st_eng : bool,
+	ws_size : int,
+	work_type : str,
+	func_name : str,
 	vs_t : int = vs_thd_dft,
 ) -> vs.VideoNode :
 
-	func_name = "DPIR_DBLK_NV"
 	_validate_input_clip(func_name, input)
 	_validate_bool(func_name, "lt_hd", lt_hd)
-	_validate_literal(func_name, "model", model, [2, 3])
 	_validate_numeric(func_name, "nr_lv", nr_lv, min_val=0.0, exclusive_min=True)
 	_validate_literal(func_name, "gpu", gpu, [0, 1, 2])
 	_validate_numeric(func_name, "gpu_t", gpu_t, min_val=1, int_only=True)
@@ -1743,7 +1743,10 @@ def DPIR_DBLK_NV(
 	_check_plugin(func_name, "akarin")
 
 	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
-	mdl_fname = ["drunet_deblocking_grayscale", "drunet_deblocking_color"][[2, 3].index(model)]
+	if work_type == "deblock" :
+		mdl_fname = ["drunet_deblocking_grayscale", "drunet_deblocking_color"][[2, 3].index(model)]
+	else :  # "降噪模式"
+		mdl_fname = ["drunet_gray", "drunet_color"][[0, 1].index(model)]
 	mdl_pth = plg_dir + "/models/dpir/" + mdl_fname + ".onnx"
 	if not os.path.exists(mdl_pth) :
 		raise vs.Error(f"模块 {func_name} 所请求的模型缺失")
@@ -1772,33 +1775,69 @@ def DPIR_DBLK_NV(
 	else :
 		cut0 = input
 
-	if model == 2 :
-#		cut1 = core.resize.Bilinear(clip=cut0, format=vs.GRAYH, matrix_in_s="709")
-#		cut2 = core.std.ShufflePlanes(clips=cut1, planes=0, colorfamily=vs.GRAY)
+	is_gray = (work_type == "deblock" and model == 2) or (work_type == "denoise" and model == 0)
+
+	if is_gray :
+##		cut1 = core.resize.Point(clip=cut0, format=vs.GRAYH, matrix_in_s="709")
+##		cut2 = core.std.ShufflePlanes(clips=cut1, planes=0, colorfamily=vs.GRAY)
 		cut1 = core.std.ShufflePlanes(clips=cut0, planes=0, colorfamily=vs.GRAY)
-		cut2 = core.resize.Bilinear(clip=cut1, format=vs.GRAYH, matrix_in_s="709")
+		cut2 = core.resize.Point(clip=cut1, format=vs.GRAYH, matrix_in_s="709")
 	else :
-		cut2 = core.resize.Bilinear(clip=cut0, format=vs.RGBH, matrix_in_s="709")
+		cut2 = core.resize.Point(clip=cut0, format=vs.RGBH, matrix_in_s="709")
 
 	fin = vsmlrt.DPIR(clip=cut2, strength=nr_lv, model=model, backend=vsmlrt.BackendV2.TRT(
 		num_streams=gpu_t, force_fp16=True, output_format=1,
 		workspace=None if ws_size < 128 else (ws_size if st_eng else ws_size * 2),
 		use_cuda_graph=True, use_cublas=False, use_cudnn=False,
 		static_shape=st_eng, min_shapes=[0, 0] if st_eng else [384, 384],
-		opt_shapes=None if st_eng else ([1920, 1080] if lt_hd else [1280, 720]), max_shapes=None if st_eng else ([2048, 1080] if lt_hd else [1280, 720]),
+		opt_shapes=None if st_eng else ([1920, 1080] if lt_hd else [1280, 720]),
+		max_shapes=None if st_eng else ([2048, 1080] if lt_hd else [1280, 720]),
 		device_id=gpu, short_path=True))
 
-	if model == 2 :
-		pre_mg = core.resize.Bilinear(clip=fin, format=fin.format.replace(bits_per_sample=fmt_bit_in, sample_type=0))
-#		pre_mg = core.resize.Bilinear(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
+	if is_gray :
+		pre_mg = core.resize.Point(clip=fin, format=fin.format.replace(bits_per_sample=fmt_bit_in, sample_type=0))
+##		pre_mg = core.resize.Point(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
 		output = core.std.ShufflePlanes(clips=[pre_mg, cut0, cut0], planes=[0, 1, 2], colorfamily=fmt_cf_in)
 	else :
-		output = core.resize.Bilinear(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
+		output = core.resize.Point(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
 
 	if w_tmp + h_tmp > 0 :
 		output = core.std.Crop(clip=output, right=w_tmp, bottom=h_tmp)
 
 	return output
+
+##################################################
+## DPIR去块
+##################################################
+
+def DPIR_DBLK_NV(
+	input : vs.VideoNode,
+	lt_hd : bool = False,
+	model : typing.Literal[2, 3] = 2,
+	nr_lv : float = 50.0,
+	gpu : typing.Literal[0, 1, 2] = 0,
+	gpu_t : int = 2,
+	st_eng : bool = False,
+	ws_size : int = 0,
+	vs_t : int = vs_thd_dft,
+) -> vs.VideoNode :
+
+	func_name = "DPIR_DBLK_NV"
+	_validate_literal(func_name, "model", model, [2, 3])
+
+	return DPIR_TRT_HUB(
+		input=input,
+		lt_hd=lt_hd,
+		model=model,
+		nr_lv=nr_lv,
+		gpu=gpu,
+		gpu_t=gpu_t,
+		st_eng=st_eng,
+		ws_size=ws_size,
+		work_type="deblock",
+		func_name=func_name,
+		vs_t=vs_t,
+	)
 
 ##################################################
 ## Bilateral降噪
@@ -2095,76 +2134,21 @@ def DPIR_NR_NV(
 ) -> vs.VideoNode :
 
 	func_name = "DPIR_NR_NV"
-	_validate_input_clip(func_name, input)
-	_validate_bool(func_name, "lt_hd", lt_hd)
 	_validate_literal(func_name, "model", model, [0, 1])
-	_validate_numeric(func_name, "nr_lv", nr_lv, min_val=0.0, exclusive_min=True)
-	_validate_literal(func_name, "gpu", gpu, [0, 1, 2])
-	_validate_numeric(func_name, "gpu_t", gpu_t, min_val=1, int_only=True)
-	_validate_bool(func_name, "st_eng", st_eng)
-	_validate_numeric(func_name, "ws_size", ws_size, min_val=0, int_only=True)
-	_validate_vs_threads(func_name, vs_t)
 
-	_check_plugin(func_name, "trt")
-	_check_plugin(func_name, "akarin")
-
-	plg_dir = os.path.dirname(core.trt.Version()["path"]).decode()
-	mdl_fname = ["drunet_gray", "drunet_color"][[0, 1].index(model)]
-	mdl_pth = plg_dir + "/models/dpir/" + mdl_fname + ".onnx"
-	if not os.path.exists(mdl_pth) :
-		raise vs.Error(f"模块 {func_name} 所请求的模型缺失")
-
-	vsmlrt = _check_script(func_name, "vsmlrt", "3.18.1")
-
-	core.num_threads = vs_t
-	w_in, h_in = input.width, input.height
-	size_in = w_in * h_in
-	colorlv = getattr(input.get_frame(0).props, "_ColorRange", 0)
-	fmt_src = input.format
-	fmt_in = fmt_src.id
-	fmt_bit_in = fmt_src.bits_per_sample
-	fmt_cf_in = fmt_src.color_family
-
-	if (not lt_hd and (size_in > 1280 * 720)) or (size_in > 2048 * 1080) :
-		raise Exception("源分辨率超过限制的范围，已临时中止。")
-	if not st_eng and (((w_in > 2048) or (h_in > 1080)) or ((w_in < 64) or (h_in < 64))) :
-		raise Exception("源分辨率不属于动态引擎支持的范围，已临时中止。")
-
-	tile_size = 8
-	w_tmp = math.ceil(w_in / tile_size) * tile_size - w_in
-	h_tmp = math.ceil(h_in / tile_size) * tile_size - h_in
-	if w_tmp + h_tmp > 0 :
-		cut0 = core.std.AddBorders(clip=input, right=w_tmp, bottom=h_tmp)
-	else :
-		cut0 = input
-
-	if model == 0 :
-#		cut1 = core.resize.Bilinear(clip=cut0, format=vs.GRAYH, matrix_in_s="709")
-#		cut2 = core.std.ShufflePlanes(clips=cut1, planes=0, colorfamily=vs.GRAY)
-		cut1 = core.std.ShufflePlanes(clips=cut0, planes=0, colorfamily=vs.GRAY)
-		cut2 = core.resize.Bilinear(clip=cut1, format=vs.GRAYH, matrix_in_s="709")
-	else :
-		cut2 = core.resize.Bilinear(clip=cut0, format=vs.RGBH, matrix_in_s="709")
-
-	fin = vsmlrt.DPIR(clip=cut2, strength=nr_lv, model=model, backend=vsmlrt.BackendV2.TRT(
-		num_streams=gpu_t, force_fp16=True, output_format=1,
-		workspace=None if ws_size < 128 else (ws_size if st_eng else ws_size * 2),
-		use_cuda_graph=True, use_cublas=False, use_cudnn=False,
-		static_shape=st_eng, min_shapes=[0, 0] if st_eng else [384, 384],
-		opt_shapes=None if st_eng else ([1920, 1080] if lt_hd else [1280, 720]), max_shapes=None if st_eng else ([2048, 1080] if lt_hd else [1280, 720]),
-		device_id=gpu, short_path=True))
-
-	if model == 0 :
-		pre_mg = core.resize.Bilinear(clip=fin, format=fin.format.replace(bits_per_sample=fmt_bit_in, sample_type=0))
-#		pre_mg = core.resize.Bilinear(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
-		output = core.std.ShufflePlanes(clips=[pre_mg, cut0, cut0], planes=[0, 1, 2], colorfamily=fmt_cf_in)
-	else :
-		output = core.resize.Bilinear(clip=fin, format=fmt_in, matrix_s="709", range=1 if colorlv==0 else None)
-
-	if w_tmp + h_tmp > 0 :
-		output = core.std.Crop(clip=output, right=w_tmp, bottom=h_tmp)
-
-	return output
+	return DPIR_TRT_HUB(
+		input=input,
+		lt_hd=lt_hd,
+		model=model,
+		nr_lv=nr_lv,
+		gpu=gpu,
+		gpu_t=gpu_t,
+		st_eng=st_eng,
+		ws_size=ws_size,
+		work_type="denoise",
+		func_name=func_name,
+		vs_t=vs_t,
+	)
 
 ##################################################
 ## FFT3D降噪
@@ -2827,7 +2811,7 @@ def UAI_ORT_HUB(
 	return output
 
 ##################################################
-## 自定义ONNX模型（仅支持放大类） CoreML
+## 自定义ONNX模型 CoreML
 ##################################################
 
 def UAI_COREML(
@@ -2861,7 +2845,7 @@ def UAI_COREML(
 	)
 
 ##################################################
-## 自定义ONNX模型（仅支持放大类） DirectML
+## 自定义ONNX模型 DirectML
 ##################################################
 
 def UAI_DML(
@@ -2894,7 +2878,7 @@ def UAI_DML(
 	)
 
 ##################################################
-## 自定义ONNX模型（仅支持放大类）
+## 自定义ONNX模型 MIGraphX
 ##################################################
 
 def UAI_MIGX(
@@ -2956,7 +2940,7 @@ def UAI_MIGX(
 	return output
 
 ##################################################
-## 自定义ONNX模型（仅支持放大类）
+## 自定义ONNX模型 TensorRT
 ##################################################
 
 def UAI_NV_TRT(
