@@ -5,6 +5,7 @@ import vapoursynth as vs
 from vapoursynth import core
 import k7sfunc as k7f
 
+core.num_threads = k7f.vs_t_dft
 clip = video_in
 
 ############
