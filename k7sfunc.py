@@ -2,7 +2,7 @@
 ### 文档： https://github.com/hooke007/mpv_PlayKit/wiki/3_K7sfunc
 ##################################################
 
-__version__ = "0.10.11"
+__version__ = "0.10.12"
 
 __all__ = [
 	"vs_t_dft",
@@ -469,9 +469,10 @@ def COLOR_P3W_FIX(
 
 def FMT2YUV_SP(
 	input : vs.VideoNode,
-) -> vs.VideoNode :
+) -> tuple[vs.VideoNode, vs.VideoNode] :
 
 	fmt_in = input.format.id
+	clip = input
 	if fmt_in == vs.YUV420P8 :
 		clip8 = clip
 	elif fmt_in == vs.YUV420P10 :
@@ -588,7 +589,7 @@ def EQ(
 def LAYER_HIGH(
 	input : vs.VideoNode,
 	blur_m : typing.Literal[0, 1, 2] = 2,
-) -> vs.VideoNode :
+) -> tuple[vs.VideoNode, vs.VideoNode] :
 
 	fmt_in = input.format.id
 
