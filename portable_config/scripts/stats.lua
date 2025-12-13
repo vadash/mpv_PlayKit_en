@@ -1,6 +1,6 @@
 --[[
 SOURCE_ https://github.com/mpv-player/mpv/blob/master/player/lua/stats.lua
-COMMIT_ 0fb40b654d969b2447ae0f71bcb695d7cf597f9c
+COMMIT_ d3ec15bca87536341f121a4f0f97954d00a6cfe5
 文档_ stats.conf
 
 mpv.conf的前置条件 --load-stats-overlay=no
@@ -902,7 +902,7 @@ local function append_hdr(s, hdr, video_out)
     local has_fall = hdr["max-fall"] and hdr["max-fall"] > 0
 
     if has_dml or has_cll or has_fall then
-        append(s, "", {prefix="HDR10:"})
+        append(s, "", {prefix=video_out and "" or "HDR10:", prefix_sep=video_out and "" or nil})
         if has_dml then
             -- libplacebo uses close to zero values as "defined zero"
             hdr["min-luma"] = hdr["min-luma"] <= 1e-6 and 0 or hdr["min-luma"]
