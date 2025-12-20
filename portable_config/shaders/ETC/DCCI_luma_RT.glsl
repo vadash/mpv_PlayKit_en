@@ -22,10 +22,10 @@ LICENSE:
 5.0
 
 
-//!HOOK MAIN
+//!HOOK LUMA
 //!BIND HOOKED
-//!SAVE DCCI_PRE
-//!DESC [DCCI_RT] pre
+//!SAVE DCCI_LUMA_PRE
+//!DESC [DCCI_luma_RT] pre
 //!WIDTH HOOKED.w 2 *
 //!HEIGHT HOOKED.h 2 *
 //!WHEN OUTPUT.w HOOKED.w 1.200 * > OUTPUT.h HOOKED.h 1.200 * > *
@@ -33,11 +33,7 @@ LICENSE:
 const vec4 CUBIC_WEIGHTS = vec4(-0.0625, 0.5625, 0.5625, -0.0625);
 
 float getPixel(ivec2 coord) {
-	return linearize(texelFetch(HOOKED_raw, coord, 0)).r;
-}
-
-vec3 getPixelRGB(ivec2 coord) {
-	return linearize(texelFetch(HOOKED_raw, coord, 0)).rgb;
+	return texelFetch(HOOKED_raw, coord, 0).x * HOOKED_mul;
 }
 
 vec4 hook() {
@@ -47,7 +43,7 @@ vec4 hook() {
 
 	if (!is_odd.x && !is_odd.y) {
 		ivec2 lr_coord = hr_coord / 2;
-		return vec4(texelFetch(HOOKED_raw, lr_coord, 0).rgb, 1.0);
+		return vec4(getPixel(lr_coord), 0.0, 0.0, 1.0);
 	}
 
 	if (is_odd.x && is_odd.y) {
@@ -69,25 +65,15 @@ vec4 hook() {
 		d2 += abs(P(1,0) - P(2,1)) + abs(P(2,1) - P(3,2));
 		d2 += abs(P(2,0) - P(3,1));
 
+		float v1_0 = P(0, 3), v1_1 = P(1, 2), v1_2 = P(2, 1), v1_3 = P(3, 0);
+		float v2_0 = P(0, 0), v2_1 = P(1, 1), v2_2 = P(2, 2), v2_3 = P(3, 3);
+
 		#undef P
-		#define P_RGB(r, c) getPixelRGB(lr_origin + ivec2(c, r))
 
-		vec3 v1_0 = P_RGB(0, 3);
-		vec3 v1_1 = P_RGB(1, 2);
-		vec3 v1_2 = P_RGB(2, 1);
-		vec3 v1_3 = P_RGB(3, 0);
+		float p1 = CUBIC_WEIGHTS.x * v1_0 + CUBIC_WEIGHTS.y * v1_1 + CUBIC_WEIGHTS.z * v1_2 + CUBIC_WEIGHTS.w * v1_3;
+		float p2 = CUBIC_WEIGHTS.x * v2_0 + CUBIC_WEIGHTS.y * v2_1 + CUBIC_WEIGHTS.z * v2_2 + CUBIC_WEIGHTS.w * v2_3;
 
-		vec3 v2_0 = P_RGB(0, 0);
-		vec3 v2_1 = P_RGB(1, 1);
-		vec3 v2_2 = P_RGB(2, 2);
-		vec3 v2_3 = P_RGB(3, 3);
-
-		#undef P_RGB
-
-		vec3 p1 = CUBIC_WEIGHTS.x * v1_0 + CUBIC_WEIGHTS.y * v1_1 + CUBIC_WEIGHTS.z * v1_2 + CUBIC_WEIGHTS.w * v1_3;
-		vec3 p2 = CUBIC_WEIGHTS.x * v2_0 + CUBIC_WEIGHTS.y * v2_1 + CUBIC_WEIGHTS.z * v2_2 + CUBIC_WEIGHTS.w * v2_3;
-
-		vec3 result;
+		float result;
 		if ((1.0 + d1) / (1.0 + d2) > T) {
 			result = p2;
 		} else if ((1.0 + d2) / (1.0 + d1) > T) {
@@ -97,17 +83,17 @@ vec4 hook() {
 			float w2 = 1.0 / (1.0 + pow(d2, K));
 			result = (w1 * p1 + w2 * p2) / (w1 + w2);
 		}
-		return delinearize(vec4(result, 1.0));
+		return vec4(result, 0.0, 0.0, 1.0);
 	}
 
 	return vec4(0.0, 0.0, 0.0, 1.0);
 
 }
 
-//!HOOK MAIN
-//!BIND DCCI_PRE
+//!HOOK LUMA
+//!BIND DCCI_LUMA_PRE
 //!BIND HOOKED
-//!DESC [DCCI_RT] fin
+//!DESC [DCCI_luma_RT] fin
 //!WIDTH HOOKED.w 2 *
 //!HEIGHT HOOKED.h 2 *
 //!WHEN OUTPUT.w HOOKED.w 1.200 * > OUTPUT.h HOOKED.h 1.200 * > *
@@ -117,18 +103,9 @@ const vec4 CUBIC_WEIGHTS = vec4(-0.0625, 0.5625, 0.5625, -0.0625);
 float getMixedPixel(ivec2 coord) {
 	bvec2 is_odd = bvec2(coord % 2);
 	if (!is_odd.x && !is_odd.y) {
-		return linearize(texelFetch(HOOKED_raw, coord / 2, 0)).r;
+		return texelFetch(HOOKED_raw, coord / 2, 0).x * HOOKED_mul;
 	} else {
-		return linearize(texelFetch(DCCI_PRE_raw, coord, 0)).r;
-	}
-}
-
-vec3 getMixedPixelRGB(ivec2 coord) {
-	bvec2 is_odd = bvec2(coord % 2);
-	if (!is_odd.x && !is_odd.y) {
-		return linearize(texelFetch(HOOKED_raw, coord / 2, 0)).rgb;
-	} else {
-		return linearize(texelFetch(DCCI_PRE_raw, coord, 0)).rgb;
+		return texelFetch(DCCI_LUMA_PRE_raw, coord, 0).x * DCCI_LUMA_PRE_mul;
 	}
 }
 
@@ -138,7 +115,7 @@ vec4 hook() {
 	bvec2 is_odd = bvec2(hr_coord % 2);
 
 	if (is_odd.x == is_odd.y) {
-		return vec4(texelFetch(DCCI_PRE_raw, hr_coord, 0).rgb, 1.0);
+		return vec4(texelFetch(DCCI_LUMA_PRE_raw, hr_coord, 0).x * DCCI_LUMA_PRE_mul, 0.0, 0.0, 1.0);
 	}
 
 	#define A5(r, c) getMixedPixel(hr_coord + ivec2(c - 2, r - 2))
@@ -154,24 +131,17 @@ vec4 hook() {
 	d2 += abs(A5(0,3) - A5(2,3)) + abs(A5(2,3) - A5(4,3));
 
 	#undef A5
-	#define A7_RGB(r, c) getMixedPixelRGB(hr_coord + ivec2(c - 3, r - 3))
+	#define A7(r, c) getMixedPixel(hr_coord + ivec2(c - 3, r - 3))
 
-	vec3 h0 = A7_RGB(3, 0);
-	vec3 h1 = A7_RGB(3, 2);
-	vec3 h2 = A7_RGB(3, 4);
-	vec3 h3 = A7_RGB(3, 6);
+	float h0 = A7(3, 0), h1 = A7(3, 2), h2 = A7(3, 4), h3 = A7(3, 6);
+	float v0 = A7(0, 3), v1 = A7(2, 3), v2 = A7(4, 3), v3 = A7(6, 3);
 
-	vec3 v0 = A7_RGB(0, 3);
-	vec3 v1 = A7_RGB(2, 3);
-	vec3 v2 = A7_RGB(4, 3);
-	vec3 v3 = A7_RGB(6, 3);
+	#undef A7
 
-	#undef A7_RGB
+	float p1 = CUBIC_WEIGHTS.x * h0 + CUBIC_WEIGHTS.y * h1 + CUBIC_WEIGHTS.z * h2 + CUBIC_WEIGHTS.w * h3;
+	float p2 = CUBIC_WEIGHTS.x * v0 + CUBIC_WEIGHTS.y * v1 + CUBIC_WEIGHTS.z * v2 + CUBIC_WEIGHTS.w * v3;
 
-	vec3 p1 = CUBIC_WEIGHTS.x * h0 + CUBIC_WEIGHTS.y * h1 + CUBIC_WEIGHTS.z * h2 + CUBIC_WEIGHTS.w * h3;
-	vec3 p2 = CUBIC_WEIGHTS.x * v0 + CUBIC_WEIGHTS.y * v1 + CUBIC_WEIGHTS.z * v2 + CUBIC_WEIGHTS.w * v3;
-
-	vec3 result;
+	float result;
 	if ((1.0 + d1) / (1.0 + d2) > T) {
 		result = p2;
 	} else if ((1.0 + d2) / (1.0 + d1) > T) {
@@ -182,7 +152,7 @@ vec4 hook() {
 		result = (w1 * p1 + w2 * p2) / (w1 + w2);
 	}
 
-	return delinearize(vec4(result, 1.0));
+	return vec4(result, 0.0, 0.0, 1.0);
 
 }
 
