@@ -30,9 +30,8 @@
  */
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (IP)
+//!DESC [Fast_Guided_smth_lite] (IP)
 //!BIND HOOKED
 //!WIDTH HOOKED.w 1.0 /
 //!HEIGHT HOOKED.h 1.0 /
@@ -44,9 +43,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (MEANIP)
+//!DESC [Fast_Guided_smth_lite] (MEANIP)
 //!BIND IP
 //!WIDTH IP.w 1.5 /
 //!HEIGHT IP.h 1.5 /
@@ -58,9 +56,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (IP_SQ)
+//!DESC [Fast_Guided_smth_lite] (IP_SQ)
 //!BIND IP
 //!WIDTH IP.w
 //!HEIGHT IP.h
@@ -72,9 +69,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (CORRIP)
+//!DESC [Fast_Guided_smth_lite] (CORRIP)
 //!BIND IP_SQ
 //!WIDTH MEANIP.w
 //!HEIGHT MEANIP.h
@@ -86,9 +82,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (A)
+//!DESC [Fast_Guided_smth_lite] (A)
 //!BIND MEANIP
 //!BIND CORRIP
 //!WIDTH IP.w
@@ -105,9 +100,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (B)
+//!DESC [Fast_Guided_smth_lite] (B)
 //!BIND A
 //!BIND MEANIP
 //!WIDTH IP.w
@@ -120,9 +114,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (MEANA)
+//!DESC [Fast_Guided_smth_lite] (MEANA)
 //!BIND A
 //!WIDTH MEANIP.w
 //!HEIGHT MEANIP.h
@@ -134,9 +127,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s] (MEANB)
+//!DESC [Fast_Guided_smth_lite] (MEANB)
 //!BIND B
 //!WIDTH MEANIP.w
 //!HEIGHT MEANIP.h
@@ -148,9 +140,8 @@ vec4 hook()
 }
 
 //!HOOK LUMA
-//!HOOK CHROMA
 //!HOOK RGB
-//!DESC [guided_s]
+//!DESC [Fast_Guided_smth_lite] FIN
 //!BIND HOOKED
 //!BIND MEANA
 //!BIND MEANB
