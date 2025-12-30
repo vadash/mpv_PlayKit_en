@@ -17,7 +17,7 @@ LICENSE:
 
 //!PARAM SPD
 //!TYPE float
-//!MINIMUM 0.0
+//!MINIMUM 1.0
 //!MAXIMUM 1000.0
 60.0
 
