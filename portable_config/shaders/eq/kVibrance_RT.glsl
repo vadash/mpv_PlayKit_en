@@ -165,19 +165,23 @@ vec4 hook() {
 	float max_color = max(color.r, max(color.g, color.b));
 	float min_color = min(color.r, min(color.g, color.b));
 
-	vec3 coeffVibrance;
+	if (max_color > 0.005) {
+		vec3 coeffVibrance;
 
-	#if MODE == 1
-		float color_saturation = max_color - min_color;
-		coeffVibrance = vec3(VF_R, VF_G, VF_B) * effectiveVIB;
-		coeffVibrance *= (1.0 - sign(coeffVibrance) * color_saturation);
-	#else
-		float saturation = (max_color - min_color) / (max_color + 1e-5);
-		float weight = (1.0 - saturation) * (1.0 - saturation);
-		coeffVibrance = vec3(VF_R, VF_G, VF_B) * effectiveVIB * weight;
-	#endif
+		#if MODE == 1
+			float color_saturation = max_color - min_color;
+			coeffVibrance = vec3(VF_R, VF_G, VF_B) * effectiveVIB;
+			coeffVibrance *= (1.0 - sign(coeffVibrance) * color_saturation);
+		#else
+			float saturation = (max_color - min_color) / (max_color + 1e-5);
+			float weight = (1.0 - saturation) * (1.0 - saturation);
+			coeffVibrance = vec3(VF_R, VF_G, VF_B) * effectiveVIB * weight;
+		#endif
 
-	color.rgb = clamp(mix(vec3(luma), color.rgb, 1.0 + coeffVibrance), 0.0, 1.0);
+		float darkFade = smoothstep(0.005, 0.02, max_color);
+		coeffVibrance *= darkFade;
+		color.rgb = clamp(mix(vec3(luma), color.rgb, 1.0 + coeffVibrance), 0.0, 1.0);
+	}
 
 #endif
 
