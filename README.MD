@@ -1,3 +1,5 @@
+![](https://github.com/hooke007/mpv_PlayKit/blob/lite/Temp/mpv_PK.jpg)
+
 # mpv播放器折腾记录
 
 _从萌新到大白，<s>用前嫌麻烦</s> 用后真香_  
